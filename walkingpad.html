@@ -469,7 +469,6 @@ async function connectBLE() {
 
     await notifyC.startNotifications();
     notifyC.addEventListener('characteristicvaluechanged', onNotify);
-    try { await notifyC.readValue(); } catch(e) {}
     
     setDot('on'); setBleTxt(bleDevice.name || 'WALKINGPAD');
     showCtrl();
