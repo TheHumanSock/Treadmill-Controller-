@@ -471,8 +471,7 @@ async function connectBLE() {
     addLog('info', `Connected: ${bleDevice.name || 'WalkingPad'}`);
 
     // Poll status every second
-    sendCmd(CMD_STATUS);
-    pollTimer = setInterval(() => sendCmd(CMD_STATUS), 1000);
+    pollTimer = setInterval(() => sendCmd(cmdAskStats()), 1000);
 
   } catch (e) {
     setDot(''); setMsg('FAILED — TRY AGAIN');
