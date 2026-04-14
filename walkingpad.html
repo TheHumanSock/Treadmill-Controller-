@@ -429,14 +429,19 @@ function cmdAskStats() {
 // Format: f8 a2 [state] [speed*10] [mode] 00 00 [time_s] 00 [dist3b high mid lo] 00 [steps hi lo] ... [cs] fd
 function parseStat(buf) {
   if (buf.length < 18 || buf[0] !== 0xf8) return null;
-  const b = buf;
+  if (buf[1] === 0xa5) {
+    // stats response — parse differently
+    return {
+      state: 0, speed: 0, mode: MODE_STANDBY,
+      time: buf[7], dist: (buf[9]*65536 + buf[10]*256 + buf[11]) / 100,
+      steps: buf[12]*256 + buf[13]
+    };
+  }
+  if (buf[1] !== 0xa2) return null;
   return {
-    state: b[2],                            // 1=running, 0/9=idle
-    speed: b[3] / 10,                       // km/h
-    mode:  b[4],                            // 0=auto 1=manual 2=standby
-    time:  b[7],                            // seconds (approx)
-    dist:  (b[9]*65536 + b[10]*256 + b[11]) / 100, // km
-    steps: b[12]*256 + b[13]               // steps
+    state: b[2], speed: buf[3]/10, mode: buf[4],
+    time: buf[7], dist: (buf[9]*65536 + buf[10]*256 + buf[11]) / 100,
+    steps: buf[12]*256 + buf[13]
   };
 }
 
