@@ -428,7 +428,7 @@ function cmdAskStats() {
 // Parse status notification from belt
 // Format: f8 a2 [state] [speed*10] [mode] 00 00 [time_s] 00 [dist3b high mid lo] 00 [steps hi lo] ... [cs] fd
 function parseStat(buf) {
-  if (buf.length < 18 || buf[0] !== 0xf8 || buf[1] !== 0xa2) return null;
+  if (buf.length < 18 || buf[0] !== 0xf8) return null;
   const b = buf;
   return {
     state: b[2],                            // 1=running, 0/9=idle
@@ -513,14 +513,13 @@ async function sendCmd(cmd) {
 }
 
 // ── Belt Controls ─────────────────────────────────────
-async function startBelt() {
-  // Put into manual mode, then start
-  await sendCmd(cmdMode(MODE_MANUAL));
-  await delay(150);
-  await sendCmd(CMD_START);
-  if (targetSpeed > 0) {
-    await delay(300);
+async async function startBelt() {
+  try {
+    await sendCmd(cmdMode(MODE_MANUAL));
+    await delay(400);
     await sendCmd(cmdSpeed(targetSpeed));
+  } catch(e) {
+    addLog('err', 'Start failed: ' + e.message);
   }
 }
 
