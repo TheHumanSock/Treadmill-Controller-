@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#080810">
+  <title>WalkingPad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #080810;
+      --surface:   #10101c;
+      --surface2:  #161625;
+      --border:    #1c1c30;
+      --accent:    #00e5ff;
+      --accent-dim:#006a78;
+      --green:     #00ff88;
+      --danger:    #ff3b3b;
+      --warn:      #ffaa00;
+      --text:      #d8d8f0;
+      --muted:     #555570;
+      --muted2:    #888898;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 16px 32px;
+      user-select: none;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: 5px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .logo span { color: var(--muted2); font-weight: 300; }
+    #ble-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted2);
+      text-transform: uppercase;
+    }
+    #dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    #dot.on  { background: var(--green);  box-shadow: 0 0 10px var(--green);  animation: pulse 2s infinite; }
+    #dot.blink { background: var(--warn); animation: blink 0.7s infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 6px var(--green)} 50%{box-shadow:0 0 16px var(--green)} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* ── Connect Screen ── */
+    #connect-screen {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 65vh; gap: 18px;
+      text-align: center;
+    }
+    .connect-glyph {
+      font-size: 56px; color: var(--border);
+      line-height: 1;
+    }
+    #connect-msg {
+      font-size: 11px; letter-spacing: 3px;
+      color: var(--muted2); text-transform: uppercase;
+    }
+    #btn-connect {
+      background: rgba(0,229,255,0.06);
+      border: 1px solid var(--accent-dim);
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px; letter-spacing: 3px;
+      padding: 14px 32px; border-radius: 3px;
+      cursor: pointer; text-transform: uppercase;
+      transition: all 0.2s;
+    }
+    #btn-connect:active { background: var(--accent-dim); color: #000; }
+    #btn-connect:disabled { opacity: 0.4; cursor: default; }
+    .hint {
+      font-size: 10px; color: var(--muted);
+      line-height: 1.9; max-width: 260px;
+    }
+
+    /* ── Control Screen ── */
+    #ctrl-screen { display: none; }
+
+    /* Speed readout */
+    .speed-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px 20px 16px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .card-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 4px;
+    }
+    .card-label {
+      font-size: 9px; letter-spacing: 4px;
+      color: var(--muted); text-transform: uppercase;
+    }
+    .mode-tag {
+      font-size: 9px; letter-spacing: 2px;
+      padding: 3px 7px; border-radius: 2px;
+      text-transform: uppercase; border: 1px solid var(--muted);
+      color: var(--muted); transition: all 0.3s;
+    }
+    .mode-tag.manual { border-color: var(--accent-dim); color: var(--accent); }
+    .mode-tag.auto   { border-color: #008844; color: var(--green); }
+    .speed-big {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 96px; font-weight: 800;
+      color: var(--accent); line-height: 0.95;
+      letter-spacing: -3px;
+      transition: color 0.3s;
+    }
+    .speed-big.zero { color: var(--muted); }
+    .speed-unit {
+      font-size: 12px; letter-spacing: 3px;
+      color: var(--muted2); margin-top: 6px;
+    }
+
+    /* Stats */
+    .stats-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .stat-cell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 11px 8px; text-align: center;
+    }
+    .stat-lbl { font-size: 8px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+    .stat-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px; font-weight: 600; color: var(--text);
+    }
+    .stat-val small { font-size: 12px; color: var(--muted); }
+
+    /* Main action buttons */
+    .action-row {
+      display: grid; grid-template-columns: 1fr 2fr;
+      gap: 8px; margin-bottom: 10px;
+    }
+    .btn-stop {
+      background: rgba(255,59,59,0.07);
+      border: 2px solid rgba(255,59,59,0.3);
+      color: var(--danger);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px; font-weight: 800;
+      letter-spacing: 3px;
+      padding: 18px 12px; border-radius: 3px;
+      cursor: pointer; text-align: center;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+    .btn-stop:active { background: var(--danger); color: #000; transform: scale(0.97); }
+
+    #btn-start {
+      background: rgba(0,229,255,0.06);
+      border: 2px solid var(--accent-dim);
+      color: var(--accent);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px; font-weight: 800;
+      letter-spacing: 4px;
+      padding: 18px 12px; border-radius: 3px;
+      cursor: pointer; text-align: center;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+    #btn-start:active { transform: scale(0.97); }
+    #btn-start.running {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.1);
+      box-shadow: 0 0 24px rgba(0,229,255,0.1);
+    }
+
+    /* Speed adjustment */
+    .speed-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 10px;
+    }
+    .btn-speed {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px; font-weight: 700;
+      letter-spacing: 1px;
+      padding: 15px; border-radius: 3px;
+      cursor: pointer; text-align: center;
+      transition: all 0.15s;
+    }
+    .btn-speed:active { border-color: var(--accent); color: var(--accent); transform: scale(0.97); }
+
+    /* Presets */
+    .preset-label { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+    .presets {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 6px; margin-bottom: 14px;
+    }
+    .prs {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted2);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 17px; font-weight: 600;
+      padding: 10px 0; border-radius: 3px;
+      cursor: pointer; text-align: center;
+      transition: all 0.12s;
+    }
+    .prs:active { border-color: var(--accent); color: var(--accent); transform: scale(0.94); }
+    .prs.active { border-color: var(--accent-dim); color: var(--accent); background: rgba(0,229,255,0.05); }
+
+    /* Mode + Disconnect row */
+    .bottom-row {
+      display: flex; gap: 8px; margin-bottom: 4px;
+    }
+    .btn-mode {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted2);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      padding: 11px 8px; border-radius: 3px;
+      cursor: pointer; text-align: center;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+    .btn-mode:active { border-color: var(--muted2); color: var(--text); }
+    .btn-disc {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      padding: 11px 8px; border-radius: 3px;
+      cursor: pointer; text-transform: uppercase;
+    }
+
+    /* Debug */
+    .debug-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0 6px;
+      border-top: 1px solid var(--border);
+      margin-top: 12px;
+      cursor: pointer;
+    }
+    .debug-bar span { font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+    #log {
+      background: #04040c;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px;
+      height: 150px;
+      overflow-y: auto;
+      font-size: 10px;
+      line-height: 1.7;
+      display: none;
+      scroll-behavior: smooth;
+    }
+    #log.show { display: block; }
+    .l-rx   { color: #00ff88; }
+    .l-tx   { color: var(--accent); }
+    .l-info { color: var(--muted2); }
+    .l-err  { color: var(--danger); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Walking<span>Pad</span></div>
+  <div id="ble-status">
+    <div id="dot"></div>
+    <span id="ble-txt">READY</span>
+  </div>
+</header>
+
+<!-- ── Connect Screen ── -->
+<div id="connect-screen">
+  <div class="connect-glyph">◉</div>
+  <div id="connect-msg">AWAITING CONNECTION</div>
+  <button id="btn-connect" onclick="connectBLE()">⬡ CONNECT</button>
+  <div class="hint">
+    Open in Chrome on Android.<br>
+    Make sure KS Fit app is closed &amp; WalkingPad is powered on.
+  </div>
+</div>
+
+<!-- ── Control Screen ── -->
+<div id="ctrl-screen">
+
+  <div class="speed-card">
+    <div class="card-header">
+      <div class="card-label">CURRENT SPEED</div>
+      <div class="mode-tag" id="mode-tag">STANDBY</div>
+    </div>
+    <div class="speed-big zero" id="spd">0.0</div>
+    <div class="speed-unit">KM / H</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-cell">
+      <div class="stat-lbl">TIME</div>
+      <div class="stat-val" id="s-time" style="font-size:19px;">00:00</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-lbl">DIST</div>
+      <div class="stat-val" id="s-dist">0.00<small>km</small></div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-lbl">STEPS</div>
+      <div class="stat-val" id="s-steps">0</div>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn-stop" onclick="stopBelt()">■<br>STOP</button>
+    <button id="btn-start" onclick="startBelt()">▶ START</button>
+  </div>
+
+  <div class="speed-row">
+    <button class="btn-speed" onclick="adjustSpeed(-5)">▼ &minus;0.5</button>
+    <button class="btn-speed" onclick="adjustSpeed(+5)">▲ +0.5</button>
+  </div>
+
+  <div class="preset-label">SPEED PRESETS (KM/H)</div>
+  <div class="presets" id="presets">
+    <div class="prs" onclick="setSpd(10)">1.0</div>
+    <div class="prs" onclick="setSpd(15)">1.5</div>
+    <div class="prs" onclick="setSpd(20)">2.0</div>
+    <div class="prs" onclick="setSpd(30)">3.0</div>
+    <div class="prs" onclick="setSpd(45)">4.5</div>
+  </div>
+
+  <div class="bottom-row">
+    <button class="btn-mode" onclick="toggleMode()">⇄ TOGGLE AUTO/MANUAL</button>
+    <button class="btn-disc" onclick="disc()">DISCONNECT</button>
+  </div>
+
+  <div class="debug-bar" onclick="toggleLog()">
+    <span>▸ DEBUG LOG</span>
+    <span id="log-arrow" style="color:var(--muted);font-size:11px;">▾</span>
+  </div>
+  <div id="log"></div>
+  <div style="font-size:9px;color:var(--muted);line-height:1.8;margin-top:8px;">
+    Protocol: BLE GATT · Service fe00 · Write fe02 · Notify fe01<br>
+    Based on <a href="https://github.com/ph4r05/ph4-walkingpad" style="color:var(--muted2)">ph4r05/ph4-walkingpad</a> (reverse-engineered)
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  WalkingPad BLE Protocol
+//  Reverse-engineered: github.com/ph4r05/ph4-walkingpad
+//  Service:  0000fe00-0000-1000-8000-00805f9b34fb
+//  Write:    0000fe02-0000-1000-8000-00805f9b34fb
+//  Notify:   0000fe01-0000-1000-8000-00805f9b34fb
+//  Packet:   0xf7 + [payload] + sum(payload)&0xff + 0xfd
+// ═══════════════════════════════════════════════════════
+
+const SVC  = '0000fe00-0000-1000-8000-00805f9b34fb';
+const CHR1 = '0000fe01-0000-1000-8000-00805f9b34fb'; // notify
+const CHR2 = '0000fe02-0000-1000-8000-00805f9b34fb'; // write
+
+const MODE_AUTO    = 0;
+const MODE_MANUAL  = 1;
+const MODE_STANDBY = 2;
+
+let bleDevice = null, writeChar = null, pollTimer = null;
+let curSpeed = 0, curMode = MODE_STANDBY, isRunning = false;
+let targetSpeed = 20; // 2.0 km/h default
+let logOpen = false;
+
+// Build a valid protocol packet
+function pkt(payload) {
+  const cs = payload.reduce((a, b) => (a + b) & 0xff, 0);
+  return new Uint8Array([0xf7, ...payload, cs, 0xfd]);
+}
+
+// Belt control commands (opcode 0xa2)
+// sub-commands inferred from ph4-walkingpad source constants
+const CMD_START  = pkt([0xa2, 0x04, 0x00, 0x00, 0x00, 0x00]); // start belt
+const CMD_STOP   = pkt([0xa2, 0x00, 0x00, 0x00, 0x00, 0x00]); // stop / standby
+const CMD_STATUS = pkt([0xa2, 0x02, 0x00, 0x00, 0x00, 0x00]); // query status
+
+function cmdSpeed(v10) { return pkt([0xa2, 0x01, v10, 0x00, 0x00, 0x00]); }
+function cmdMode(m)    { return pkt([0xa2, 0x02, m,   0x00, 0x00, 0x00]); }
+
+// Timestamp-based status query (alternative, longer form)
+function cmdAskStats() {
+  const t = Math.floor(Date.now() / 1000);
+  return pkt([0xa5, (t>>24)&0xff, (t>>16)&0xff, (t>>8)&0xff, t&0xff, 0x00, 0x00]);
+}
+
+// Parse status notification from belt
+// Format: f8 a2 [state] [speed*10] [mode] 00 00 [time_s] 00 [dist3b high mid lo] 00 [steps hi lo] ... [cs] fd
+function parseStat(buf) {
+  if (buf.length < 18 || buf[0] !== 0xf8 || buf[1] !== 0xa2) return null;
+  const b = buf;
+  return {
+    state: b[2],                            // 1=running, 0/9=idle
+    speed: b[3] / 10,                       // km/h
+    mode:  b[4],                            // 0=auto 1=manual 2=standby
+    time:  b[7],                            // seconds (approx)
+    dist:  (b[9]*65536 + b[10]*256 + b[11]) / 100, // km
+    steps: b[12]*256 + b[13]               // steps
+  };
+}
+
+// ── BLE Connection ────────────────────────────────────
+async function connectBLE() {
+  if (!navigator.bluetooth) {
+    setMsg('WEB BLUETOOTH NOT SUPPORTED IN THIS BROWSER');
+    return;
+  }
+  try {
+    setBtnState(false);
+    setDot('blink'); setMsg('SCANNING FOR WALKINGPAD…');
+
+    bleDevice = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SVC] }],
+      optionalServices: [SVC]
+    });
+    bleDevice.addEventListener('gattserverdisconnected', onDisc);
+
+    setMsg('CONNECTING…');
+    const server  = await bleDevice.gatt.connect();
+    const service = await server.getPrimaryService(SVC);
+    const notifyC = await service.getCharacteristic(CHR1);
+    writeChar     = await service.getCharacteristic(CHR2);
+
+    await notifyC.startNotifications();
+    notifyC.addEventListener('characteristicvaluechanged', onNotify);
+
+    setDot('on'); setBleTxt(bleDevice.name || 'WALKINGPAD');
+    showCtrl();
+    addLog('info', `Connected: ${bleDevice.name || 'WalkingPad'}`);
+
+    // Poll status every second
+    sendCmd(CMD_STATUS);
+    pollTimer = setInterval(() => sendCmd(CMD_STATUS), 1000);
+
+  } catch (e) {
+    setDot(''); setMsg('FAILED — TRY AGAIN');
+    setBtnState(true);
+    addLog('err', 'Connect error: ' + e.message);
+    if (e.name !== 'NotFoundError') alert('BLE error: ' + e.message);
+  }
+}
+
+function onNotify(ev) {
+  const arr = new Uint8Array(ev.target.value.buffer);
+  addLog('rx', 'RX ' + hex(arr));
+  const s = parseStat(arr);
+  if (s) updateUI(s);
+}
+
+function onDisc() {
+  clearInterval(pollTimer); pollTimer = null;
+  writeChar = null;
+  setDot(''); setBleTxt('DISCONNECTED');
+  showConn();
+  addLog('info', 'Disconnected');
+}
+
+async function disc() {
+  clearInterval(pollTimer);
+  if (bleDevice?.gatt?.connected) bleDevice.gatt.disconnect();
+  onDisc();
+}
+
+async function sendCmd(cmd) {
+  if (!writeChar) return;
+  try {
+    addLog('tx', 'TX ' + hex(cmd));
+    await writeChar.writeValueWithoutResponse(cmd);
+  } catch (e) {
+    addLog('err', 'Write: ' + e.message);
+  }
+}
+
+// ── Belt Controls ─────────────────────────────────────
+async function startBelt() {
+  // Put into manual mode, then start
+  await sendCmd(cmdMode(MODE_MANUAL));
+  await delay(150);
+  await sendCmd(CMD_START);
+  if (targetSpeed > 0) {
+    await delay(300);
+    await sendCmd(cmdSpeed(targetSpeed));
+  }
+}
+
+async function stopBelt() {
+  await sendCmd(CMD_STOP);
+}
+
+async function adjustSpeed(delta) {
+  const v = Math.max(5, Math.min(60, Math.round(curSpeed * 10) + delta));
+  await setSpd(v);
+}
+
+async function setSpd(v10) {
+  targetSpeed = v10;
+  await sendCmd(cmdSpeed(v10));
+  updatePresets(v10);
+}
+
+async function toggleMode() {
+  const next = curMode === MODE_MANUAL ? MODE_AUTO : MODE_MANUAL;
+  await sendCmd(cmdMode(next));
+}
+
+// ── UI Updates ────────────────────────────────────────
+function updateUI(s) {
+  curSpeed  = s.speed;
+  curMode   = s.mode;
+  isRunning = s.state === 1;
+
+  // Speed
+  const spdEl = document.getElementById('spd');
+  spdEl.textContent = s.speed.toFixed(1);
+  spdEl.className   = 'speed-big' + (s.speed < 0.1 ? ' zero' : '');
+
+  // Stats
+  const mm = String(Math.floor(s.time / 60)).padStart(2, '0');
+  const ss = String(s.time % 60).padStart(2, '0');
+  document.getElementById('s-time').textContent  = `${mm}:${ss}`;
+  document.getElementById('s-dist').innerHTML    = s.dist.toFixed(2) + '<small>km</small>';
+  document.getElementById('s-steps').textContent = s.steps;
+
+  // Mode badge
+  const tag = document.getElementById('mode-tag');
+  if      (s.mode === MODE_MANUAL)  { tag.textContent='MANUAL';  tag.className='mode-tag manual'; }
+  else if (s.mode === MODE_AUTO)    { tag.textContent='AUTO';    tag.className='mode-tag auto'; }
+  else                              { tag.textContent='STANDBY'; tag.className='mode-tag'; }
+
+  // Start button
+  const sb = document.getElementById('btn-start');
+  if (isRunning) { sb.textContent='▶ RUNNING'; sb.classList.add('running'); }
+  else           { sb.textContent='▶ START';   sb.classList.remove('running'); }
+
+  // Active preset
+  updatePresets(Math.round(s.speed * 10));
+}
+
+function updatePresets(v10) {
+  document.querySelectorAll('.prs').forEach(el => {
+    const pv = Math.round(parseFloat(el.textContent) * 10);
+    el.classList.toggle('active', pv === v10);
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────
+function showCtrl() {
+  document.getElementById('connect-screen').style.display = 'none';
+  document.getElementById('ctrl-screen').style.display = 'block';
+}
+function showConn() {
+  document.getElementById('connect-screen').style.display = 'flex';
+  document.getElementById('ctrl-screen').style.display = 'none';
+  setBtnState(true);
+  setMsg('AWAITING CONNECTION');
+}
+function setDot(cls) {
+  document.getElementById('dot').className = cls;
+}
+function setBleTxt(t) {
+  document.getElementById('ble-txt').textContent = t;
+}
+function setMsg(m) {
+  document.getElementById('connect-msg').textContent = m;
+}
+function setBtnState(enabled) {
+  document.getElementById('btn-connect').disabled = !enabled;
+}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function hex(arr) {
+  return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join(' ');
+}
+function addLog(type, msg) {
+  const el = document.getElementById('log');
+  const t  = new Date().toLocaleTimeString('en-CA', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const ln = document.createElement('div');
+  ln.className = 'l-' + type;
+  ln.textContent = t + '  ' + msg;
+  el.appendChild(ln);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 120) el.removeChild(el.firstChild);
+}
+function toggleLog() {
+  logOpen = !logOpen;
+  document.getElementById('log').classList.toggle('show', logOpen);
+  document.getElementById('log-arrow').textContent = logOpen ? '▴' : '▾';
+}
+
+// Browser check
+if (!navigator.bluetooth) {
+  document.getElementById('connect-msg').textContent = 'WEB BLUETOOTH NOT SUPPORTED';
+  document.getElementById('btn-connect').disabled = true;
+  document.getElementById('btn-connect').textContent = '✗ UNSUPPORTED BROWSER';
+}
+</script>
+</body>
+</html>
